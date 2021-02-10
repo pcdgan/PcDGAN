@@ -6,7 +6,7 @@ from glob import glob
 import tensorflow as tf
 import numpy as np
 from tqdm.autonotebook import trange
-from utils import compute_diversity_loss, diversity_score
+from utils import compute_diversity_loss, diversity_score, data_plot, dist_anim
 import matplotlib.pyplot as plt
 import pprint
 from GANs import CcGAN,PcDGAN
@@ -34,6 +34,9 @@ parser.add_argument('--train_steps', type=int, default=50000, help='Number of tr
 parser.add_argument('--batch_size', type=int, default=32, help='GAN training Batch size. Default: 32')
 
 parser.add_argument('--id', type=str, default='', help='experiment ID or name. Default: ')
+
+parser.add_argument('--size', type=int, help='Number of samples to generate at each step. Default: 1000', default=1000)
+
 args = parser.parse_args()
 
 if __name__ == "__main__":
@@ -141,7 +144,7 @@ if __name__ == "__main__":
         divers = []
         KDEs = []
         MAEs = []
-        batch_size = 200
+        batch_size = args.size
         progress = trange(1000,position=0, leave=True)
         conds = np.linspace(0.05,0.95,100)
         for j in range(10):
@@ -149,6 +152,7 @@ if __name__ == "__main__":
             KDE = []
             ys = []
             MAE = []
+            Xs = []
             for i in range(100):
                 samples, y, good_samples = sample_generator(conds[i] * tf.ones([batch_size,1]),batch_size)
                 ind = np.random.choice(samples.shape[0],size=100,replace=False)
@@ -161,6 +165,7 @@ if __name__ == "__main__":
                 KDE.append(np.exp(kde.score_samples([[conds[i]]])[0]))
                 ys.append(y)
                 MAE.append(np.mean(np.abs(y-conds[i])))
+                Xs.append(samples)
                 progress.update(1)
             divers.append(diversity)
             KDEs.append(KDE)
@@ -180,6 +185,11 @@ if __name__ == "__main__":
         
         print("\nSummary of Performance:\n")
         print(tabulate([['PcDGAN',  str(PcDGAN_MAE_overall) + '+/-' + str(PcDGAN_MAE_std_overall),str(PcDGAN_KDE_overall) + '+/-' + str(PcDGAN_KDE_std_overall),str(PcDGAN_diver_overall) + '+/-' + str(PcDGAN_diver_std_overall)]], headers=['Model', 'Label Score', 'Probability Density', 'Diversity']))
+
+        ind  = np.random.choice(X.shape[0],replace=False,size=1000)
+        data_plot(X[ind],equation,'./'+folder+'/Evaluation/PcDGAN/Data_' + str(args.id) + '.png')
+
+        dist_anim(Xs,conds,equation,'./'+folder+'/Evaluation/PcDGAN/out_put_samples_' + str(args.id) + '.mp4')
 
         plt.figure(figsize=(18,12))
         plt.rc('font', size=45)
@@ -230,7 +240,7 @@ if __name__ == "__main__":
         divers = []
         KDEs = []
         MAEs = []
-        batch_size = 200
+        batch_size = args.size
         progress = trange(1000,position=0, leave=True)
         conds = np.linspace(0.05,0.95,100)
         for j in range(10):
@@ -238,6 +248,7 @@ if __name__ == "__main__":
             KDE = []
             ys = []
             MAE = []
+            Xs = []
             for i in range(100):
                 samples, y, good_samples = sample_generator(conds[i] * tf.ones([batch_size,1]),batch_size)
                 ind = np.random.choice(samples.shape[0],size=100,replace=False)
@@ -249,6 +260,7 @@ if __name__ == "__main__":
                 kde = grid.best_estimator_
                 KDE.append(np.exp(kde.score_samples([[conds[i]]])[0]))
                 ys.append(y)
+                Xs.append(samples)
                 MAE.append(np.mean(np.abs(y-conds[i])))
                 progress.update(1)
             divers.append(diversity)
@@ -269,6 +281,11 @@ if __name__ == "__main__":
         
         print("\nSummary of Performance:\n")
         print(tabulate([['CcGAN', str(CcGAN_MAE_overall) + '+/-' + str(CcGAN_MAE_std_overall),str(CcGAN_KDE_overall) + '+/-' + str(CcGAN_KDE_std_overall),str(CcGAN_diver_overall) + '+/-' + str(CcGAN_diver_std_overall)]], headers=['Model', 'Label Score', 'Probability Density', 'Diversity']))
+
+        ind  = np.random.choice(X.shape[0],replace=False,size=1000)
+        data_plot(X[ind],equation,'./'+folder+'/Evaluation/CcGAN/Data_' + str(args.id) + '.png')
+
+        dist_anim(Xs,conds,equation,'./'+folder+'/Evaluation/CcGAN/out_put_samples_' + str(args.id) + '.mp4')
 
         plt.figure(figsize=(18,12))
         plt.rc('font', size=45)

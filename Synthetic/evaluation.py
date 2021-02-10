@@ -5,7 +5,7 @@ import tensorflow as tf
 from tqdm.autonotebook import trange
 import matplotlib.pyplot as plt
 from GANs import CcGAN, PcDGAN
-from utils import compute_diversity_loss, diversity_score
+from utils import compute_diversity_loss, diversity_score, hist_anim
 import matplotlib.animation as animation
 from glob import glob
 import argparse
@@ -18,6 +18,8 @@ parser = argparse.ArgumentParser(description='Eval Parameters')
 parser.add_argument('dataset', type=str, default='Uneven', help='Set which dataset to use. Default: Uneven, Options: Uneven, Donut, Uniform')
 parser.add_argument('--estimator', type=str, help='Name of the estimator checkpoint saved in the weights folder. Default: best_checkpoint', default='best_checkpoint')
 parser.add_argument('--embedder', type=str, help='Name of the embedder checkpoint saved in the weights folder. Default: best_checkpoint', default='best_checkpoint')
+parser.add_argument('--size', type=int, help='Number of samples to generate at each step. Default: 1000', default=1000)
+
 args = parser.parse_args()
 folder = args.dataset
 if __name__ == "__main__":
@@ -70,7 +72,7 @@ if __name__ == "__main__":
     KDEs = []
     MAEs = []
     CcGAN_sim_samples = []
-    batch_size = 500
+    batch_size = args.size
     progress_Cc = trange(1000*len(CcGAN_paths),position=0, leave=True)
     for CcGAN_path in CcGAN_paths:
         model_CcGAN.generator.load_weights(CcGAN_path[0:-6])
@@ -110,6 +112,8 @@ if __name__ == "__main__":
     CcGAN_diver_std_overall = np.nanstd(divers)
     CcGAN_MAE_std = np.nanstd(MAEs,0)
     CcGAN_MAE_std_overall = np.nanstd(MAE)
+    
+    hist_anim(ys,conds,'./Evaluation/CcGAN_hist.mp4')
 
     print("\nEvaluating PcDGAN Checkpoints ...\n")
     divers = []
@@ -135,6 +139,7 @@ if __name__ == "__main__":
                 kde = KernelDensity(kernel='gaussian')
                 grid = GridSearchCV(kde, {'bandwidth': bandwidth})
                 grid.fit(y.numpy())
+                ys.append(y)
                 kde = grid.best_estimator_
                 KDE.append(np.exp(kde.score_samples([[conds[i]]])[0]))
                 MAE.append(np.mean(np.abs(y-conds[i])))
@@ -155,6 +160,7 @@ if __name__ == "__main__":
     PcDGAN_MAE_std = np.nanstd(MAEs,0)
     PcDGAN_MAE_std_overall = np.nanstd(MAE)
 
+    hist_anim(ys,conds,'./Evaluation/PcDGAN_hist.mp4')
 
     plt.figure(figsize=(18,12))
     plt.rc('font', size=45)

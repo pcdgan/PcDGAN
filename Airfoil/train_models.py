@@ -35,6 +35,8 @@ parser.add_argument('--disc_lr', type=float, default=1e-4, help='Discriminator l
 parser.add_argument('--train_steps', type=int, default=20000, help='Number of training steps. Default: 20000')
 parser.add_argument('--batch_size', type=int, default=32, help='GAN training Batch size. Default: 32')
 
+parser.add_argument('--size', type=int, help='Number of samples to generate at each step. Default: 1000', default=1000)
+
 parser.add_argument('--id', type=str, default='', help='experiment ID or name. Default: ')
 args = parser.parse_args()
 
@@ -159,7 +161,7 @@ if __name__ == "__main__":
         divers = []
         KDEs = []
         MAEs = []
-        batch_size = 500
+        batch_size = args.size
         progress = trange(1000,position=0, leave=True)
         conds = np.linspace(0.05,0.95,100)
         for j in range(10):
@@ -305,7 +307,7 @@ if __name__ == "__main__":
         divers = []
         KDEs = []
         MAEs = []
-        batch_size = 500
+        batch_size = args.size
         progress = trange(1000,position=0, leave=True)
         conds = np.linspace(0.05,0.95,100)
         for j in range(10):

@@ -5,18 +5,25 @@ import tensorflow as tf
 from tqdm.autonotebook import trange
 import matplotlib.pyplot as plt
 from GANs import CcGAN, PcDGAN
-from utils import compute_diversity_loss, batch_simulate, diversity_score
+from utils import compute_diversity_loss, batch_simulate, diversity_score, plot_airfoil_samples, plot_airfoils,hist_anim
 import matplotlib.animation as animation
 from glob import glob
 import argparse
 from sklearn.neighbors import KernelDensity
 from sklearn.model_selection import GridSearchCV
 from tabulate import tabulate
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib
+from matplotlib import cm
+from sklearn.metrics import pairwise_distances
+
 
 parser = argparse.ArgumentParser(description='Eval Parameters')
 parser.add_argument('--estimator', type=str, help='Name of the estimator checkpoint saved in the weights folder. Default: best_checkpoint', default='best_checkpoint')
 parser.add_argument('--embedder', type=str, help='Name of the embedder checkpoint saved in the weights folder. Default: best_checkpoint', default='best_checkpoint')
 parser.add_argument('--simonly', type=int, help='Only evaluate based on simluation. Default: 0(False). Set to 1 for True', default=0)
+parser.add_argument('--size', type=int, help='Number of samples to generate at each step. Default: 1000', default=1000)
 args = parser.parse_args()
 
 if __name__ == "__main__":
@@ -67,7 +74,7 @@ if __name__ == "__main__":
     KDEs = []
     MAEs = []
     CcGAN_sim_samples = []
-    batch_size = 500
+    batch_size = args.size
     if args.simonly == 0:
         progress_Cc = trange(1000*len(CcGAN_paths),position=0, leave=True)
     else:
@@ -117,6 +124,9 @@ if __name__ == "__main__":
         CcGAN_diver_std_overall = np.nanstd(divers)
         CcGAN_MAE_std = np.nanstd(MAEs,0)
         CcGAN_MAE_std_overall = np.nanstd(MAE)
+        hist_anim(ys,conds,'./Evaluation/CcGAN_hist.mp4')
+    
+    CcGAN_samples,y_Cc,_ = sample_generator(tf.cast(np.expand_dims(np.concatenate(np.tile(np.expand_dims(np.linspace(0.05,0.95,4),-1),[1,batch_size]),0),-1),tf.float32),batch_size*4)
 
     print("\nEvaluating PcDGAN Checkpoints ...\n")
     divers = []
@@ -151,6 +161,7 @@ if __name__ == "__main__":
                     kde = grid.best_estimator_
                     KDE.append(np.exp(kde.score_samples([[conds[i]]])[0]))
                     MAE.append(np.mean(np.abs(y-conds[i])))
+                    ys.append(y)
                     progress_PcD.update(1)
                 divers.append(diversity)
                 KDEs.append(KDE)
@@ -159,6 +170,9 @@ if __name__ == "__main__":
         PcDGAN_sim_samples.append(sample_generator(sim_conditions,2000)[0])
         if args.simonly == 1:
             progress_PcD.update(1)
+
+    PcDGAN_samples,y_PcD,_ = sample_generator(tf.cast(np.expand_dims(np.concatenate(np.tile(np.expand_dims(np.linspace(0.05,0.95,4),-1),[1,batch_size]),0),-1),tf.float32),batch_size*4)
+    plot_airfoil_samples(PcDGAN_samples,CcGAN_samples,y_PcD,y_Cc, np.linspace(0.05,0.95,4))
 
     if args.simonly == 0:
         PcDGAN_KDE = np.nanmean(KDEs,0)
@@ -173,6 +187,7 @@ if __name__ == "__main__":
         PcDGAN_diver_std_overall = np.nanstd(divers)
         PcDGAN_MAE_std = np.nanstd(MAEs,0)
         PcDGAN_MAE_std_overall = np.nanstd(MAE)
+        hist_anim(ys,conds,'./Evaluation/PcDGAN_hist.mp4')
 
 
         plt.figure(figsize=(18,12))
@@ -307,3 +322,102 @@ if __name__ == "__main__":
 
     print("\nSummary of Performance Based on Simulation:\n")
     print(tabulate([['CcGAN', str(CcGAN_MAE_overall) + '+/-' + str(CcGAN_MAE_std_overall),str(CcGAN_KDE_overall) + '+/-' + str(CcGAN_KDE_std_overall)], ['PcDGAN',  str(PcDGAN_MAE_overall) + '+/-' + str(PcDGAN_MAE_std_overall),str(PcDGAN_KDE_overall) + '+/-' + str(PcDGAN_KDE_std_overall)]], headers=['Model', 'Label Score', 'Probability Density']))
+
+    # t-SNE plot
+    print("Generating t-SNE plot ...")
+
+    PcD_generator = get_generator(model_PcDGAN.generator,model_PcDGAN.estimator)
+    Cc_generator = get_generator(model_CcGAN.generator,model_CcGAN.estimator,model_CcGAN.embedder)
+    n = 1000
+    n2 = 50
+    batch_size = 5000
+    cond = 0.3
+    draw_conditions = tf.cast(np.ones([batch_size,1])*cond,tf.float32)
+    PcDGAN_samples,y_PcD,_ = PcD_generator(draw_conditions,batch_size)
+    CcGAN_samples,y_Cc,_ = Cc_generator(draw_conditions,batch_size)
+    PcDGAN_samples = PcDGAN_samples.numpy()
+    CcGAN_samples = CcGAN_samples.numpy()
+    y_PcD = y_PcD.numpy()
+    y_Cc = y_Cc.numpy()
+
+    PcDGAN_samples = PcDGAN_samples[(np.abs(y_PcD-cond)<=0.025)[:,0]]
+    CcGAN_samples = CcGAN_samples[(np.abs(y_Cc-cond)<=0.025)[:,0]]
+    X = X[(np.abs(Y-cond)<=0.025)[:,0]]
+
+    y_PcD = y_PcD[np.abs(y_PcD-cond)<=0.025]
+    y_Cc = y_Cc[np.abs(y_Cc-cond)<=0.025]
+    Y = Y[np.abs(Y-cond)<=0.025]
+
+    ind = np.random.choice(X.shape[0],n,replace=False)
+    ind_Cc = np.random.choice(CcGAN_samples.shape[0],n,replace=False)
+    ind_PcD = np.random.choice(PcDGAN_samples.shape[0],n,replace=False)
+    airfoils_padgan = PcDGAN_samples[ind_PcD]
+    airfoils_gan = CcGAN_samples[ind_Cc]
+    airfoils_data = X[ind]
+    ys_data = np.squeeze(Y[ind])
+    ys_gan = np.squeeze(y_Cc[ind_Cc])
+    ys_padgan = np.squeeze(y_PcD[ind_PcD])
+    xs = np.concatenate([X[ind], CcGAN_samples[ind_Cc], PcDGAN_samples[ind_PcD]])
+    xs = xs.reshape(xs.shape[0], -1)
+    scaler_x = MinMaxScaler()
+    xs = scaler_x.fit_transform(xs)
+    tsne = TSNE(n_components=2)
+    zs = tsne.fit_transform(xs)
+    scaler_z = MinMaxScaler()
+    zs = scaler_z.fit_transform(zs)
+
+    ys = np.squeeze(np.concatenate([Y[ind], y_Cc[ind_Cc],  y_PcD[ind_PcD]]))
+    ys[np.isnan(ys)] = 0.
+    y_min = np.min(ys)
+    y_max = np.max(ys)
+    y_range = y_max-y_min
+    y_min -= 0.5*y_range
+    norm = matplotlib.colors.Normalize(vmin=np.min(np.abs(ys-cond)), vmax=1.0)
+    cmap = matplotlib.colors.ListedColormap(["#003f5c","#345771","#577187","#798c9d","#9ca8b4","#bfc5cb","#e2e2e2","#edd8c3","#f5cea3","#fac484","#fdba63","#ffb03f","#ffa600"])
+
+    def select_subset(zs, r, y_scale=0.1):
+        m = zs.shape[0]
+        zs_ = zs.copy()
+        zs_[:,1] = zs[:,1]/y_scale
+        dists = pairwise_distances(zs_) + np.eye(m) * r
+        is_removed = np.zeros(m, dtype=bool)
+        for i in range(n):
+            if not is_removed[i]:
+                is_removed = np.logical_or(is_removed, dists[i]<r)
+        not_removed = np.logical_not(is_removed)
+        return not_removed
+
+    plt.rc('font', size=36)
+    fig = plt.figure(figsize=(40, 10))
+    ax1 = fig.add_subplot(141)
+    ax1.scatter(zs[:n2,0], zs[:n2,1], s=100, marker='o', edgecolors='none', c='#9ca8b4', label='Data')
+    ax1.scatter(zs[n:n+n2,0], zs[n:n+n2,1], s=100, marker='s', edgecolors='none', c='#FFA600', label='CcGAN')
+    ax1.scatter(zs[2*n:2*n+n2,0], zs[2*n:2*n+n2,1], s=100, marker='o', edgecolors='none', c='#003F5C', label='PcDGAN')
+    ax1.legend()
+    ax1.set_aspect('equal')
+    ax1.tick_params(
+        axis='both',
+        which='both',
+        left=False,
+        right=False,
+        bottom=False,
+        top=False,
+        labelleft=False,
+        labelbottom=False)
+    ax1.set_xlim([-.01-.5/n**.5, 1.01+.5/n**.5])
+    ax1.set_ylim([-.05, 1.05])
+    ax1.set_title('Embedded airfoils')
+    r = 2./n**.5
+    ax2 = fig.add_subplot(142)
+    not_removed = select_subset(zs[:n], r)
+    plot_airfoils(airfoils_data[not_removed][0:n2], np.abs(ys_data[not_removed]-cond), zs[:n][not_removed][0:n2], ax2, norm, cmap)
+    ax2.set_title('(a) Data')
+    ax3 = fig.add_subplot(143)
+    not_removed = select_subset(zs[n:2*n], r)
+    plot_airfoils(airfoils_gan[not_removed][0:n2], np.abs(ys_gan[not_removed][0:n2]-cond), zs[n:2*n][not_removed][0:n2], ax3, norm, cmap, zs[:n][0:n2])
+    ax3.set_title('(b) CcGAN')
+    ax4 = fig.add_subplot(144)
+    not_removed = select_subset(zs[2*n:], r)
+    plot_airfoils(airfoils_padgan[not_removed][0:n2], np.abs(ys_padgan[not_removed][0:n2]-cond), zs[2*n:][not_removed][0:n2], ax4, norm, cmap, zs[:n][0:n2])
+    ax4.set_title('(c) PcDGAN')
+    plt.savefig('./Evaluation/airfoils_tsne_0.3.png',dpi=300, bbox_inches='tight')

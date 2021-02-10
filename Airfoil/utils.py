@@ -12,6 +12,13 @@ from scipy.spatial import ConvexHull
 from scipy.stats import gaussian_kde
 from scipy.spatial.distance import directed_hausdorff
 from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib
+from matplotlib import cm
+from sklearn.metrics import pairwise_distances
+import matplotlib.animation as animation
 
 #Get OS Info For Simulation
 if os.name == 'nt':
@@ -125,3 +132,99 @@ def diversity_score(data, subset_size=10, sample_times=1000):
         (sign, logdet) = np.linalg.slogdet(S)
         mean_logdet += logdet
     return mean_logdet/sample_times
+
+
+def plot_airfoil_samples(PcDGAN_samples,CcGAN_samples,y_PcD,y_Cc, conds, n_plot = 5, save_path = './Evaluation/Sample Airfoils With Error.png'):
+    
+    n_conds = conds.shape[0]
+    
+    fig, axs = plt.subplots(n_plot,n_conds*2,figsize=(64,16))
+
+    batch_size = CcGAN_samples.shape[0]//n_conds
+
+    for i in range(n_conds):
+        Cc_airfoils = CcGAN_samples[i*batch_size:(i+1)*batch_size]
+        PcD_airfoils = PcDGAN_samples[i*batch_size:(i+1)*batch_size]
+        cond = conds[i]
+        Cc_ys = y_Cc[i*batch_size:(i+1)*batch_size]
+        PcD_ys = y_PcD[i*batch_size:(i+1)*batch_size]
+        inds_PcD = np.argsort(np.abs(PcD_ys[0:n_plot]-conds[i]),0)
+        inds_Cc = np.argsort(np.abs(Cc_ys[0:n_plot]-conds[i]),0)
+
+        for k in range(n_plot):
+            j = inds_PcD[k,0]
+            axs[k,i*2].plot(PcD_airfoils[j,:,0,0],PcD_airfoils[j,:,1,0],color="#003F5C",linewidth=4)
+            axs[k,i*2].axis('equal')
+            axs[k,i*2].set_axis_off()
+            axs[k,i*2].text(0.3,-0.20,r"%.2f" % (np.abs(PcD_ys[j]-conds[i])),fontsize=70*3/n_plot)
+            j = inds_Cc[k,0]
+            axs[k,i*2+1].plot(Cc_airfoils[j,:,0,0],Cc_airfoils[j,:,1,0],color="#FFA600",linewidth=4)
+            axs[k,i*2+1].axis('equal')
+            axs[k,i*2+1].set_axis_off()
+            axs[k,i*2+1].text(0.3,-0.20,r"%.2f" % (np.abs(Cc_ys[j]-conds[i])),fontsize=70*3/n_plot)
+            
+        axs[0,2*i].text(0.45,0.2,'Input Label: %.2f' % (conds[i]),fontsize=80 * 3/n_plot)
+    axs[-1,-1].legend(['CcGAN'],bbox_to_anchor=(-3 * n_conds/4, -0.5),fancybox=False, shadow=False, framealpha=0.0, ncol=2,fontsize=70*3/n_plot)
+    axs[-1,-2].legend(['PcDGAN'],bbox_to_anchor=(-3 * n_conds/4, -0.5),fancybox=False, shadow=False, framealpha=0.0, ncol=2,fontsize=70*3/n_plot)
+
+    plt.savefig(save_path,dpi=300, bbox_inches='tight')
+
+def plot_airfoils(airfoils, ys, zs, ax, norm, cmap, zs_data=None):
+        n = airfoils.shape[0]
+        ys[np.isnan(ys)] = 0.
+        for i in range(n):
+            plot_shape(airfoils[i]+np.array([[-.5,0]]), zs[i, 0], zs[i, 1], ax, 1./n**.5, False, None, lw=1.2, alpha=.7, c=cmap(norm(ys[i])))
+        if zs_data is not None:
+            ax.scatter(zs_data[:,0], zs_data[:,1], s=100, marker='o', edgecolors='none', c='#FFA600')
+        ax.tick_params(
+            axis='both',          # changes apply to the x-axis
+            which='both',      # both major and minor ticks are affected
+            left=False,      # ticks along the bottom edge are off
+            right=False,         # ticks along the top edge are off
+            bottom=False,      # ticks along the bottom edge are off
+            top=False,         # ticks along the top edge are off
+            labelleft=False,
+            labelbottom=False)
+        ax.set_xlim([-.01-.5/n**.5, 1.01+.5/n**.5])
+        ax.set_ylim([-.05, 1.05])
+        ax.set_aspect('equal')
+        
+def plot_shape(xys, z1, z2, ax, scale, scatter, symm_axis, **kwargs):
+#    mx = max([y for (x, y) in m])
+#    mn = min([y for (x, y) in m])
+    xscl = scale# / (mx - mn)
+    yscl = scale# / (mx - mn)
+#    ax.scatter(z1, z2)
+    if scatter:
+        if 'c' not in kwargs:
+            kwargs['c'] = cm.rainbow(np.linspace(0,1,xys.shape[0]))
+#        ax.plot( *zip(*[(x * xscl + z1, y * yscl + z2) for (x, y) in xys]), lw=.2, c='b')
+        ax.scatter( *zip(*[(x * xscl + z1, y * yscl + z2) for (x, y) in xys]), edgecolors='none', **kwargs)
+    else:
+        ax.plot( *zip(*[(x * xscl + z1, y * yscl + z2) for (x, y) in xys]), **kwargs)
+        
+    if symm_axis == 'y':
+#        ax.plot( *zip(*[(-x * xscl + z1, y * yscl + z2) for (x, y) in xys]), lw=.2, c='b')
+        plt.fill_betweenx( *zip(*[(y * yscl + z2, -x * xscl + z1, x * xscl + z1)
+                          for (x, y) in xys]), color='gray', alpha=.2)
+    elif symm_axis == 'x':
+#        ax.plot( *zip(*[(x * xscl + z1, -y * yscl + z2) for (x, y) in xys]), lw=.2, c='b')
+        plt.fill_between( *zip(*[(x * xscl + z1, -y * yscl + z2, y * yscl + z2)
+                          for (x, y) in xys]), color='gray', alpha=.2)
+
+def hist_anim(ys,conds,save_location='./Evaluation/CcGAN_hist.mp4'):
+    Writer = animation.writers['ffmpeg']
+    writer = Writer(fps=20, bitrate=6800)
+    def update_hist(n, data):
+        plt.cla()
+        plt.hist(np.squeeze(data[n]),np.array(list(range(21)))/20)
+        plt.title("Conditioned On: %f" % conds[n])
+
+    fig = plt.figure()
+    hist = plt.hist(np.squeeze(ys[0]),np.array(list(range(21)))/20)
+    plt.title("Conditioned On: %f" % conds[0])
+
+
+    anim = animation.FuncAnimation(fig, update_hist, len(ys), fargs=(ys, ) )
+
+    anim.save(save_location, writer=writer)
