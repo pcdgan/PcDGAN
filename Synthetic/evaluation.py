@@ -183,9 +183,9 @@ if __name__ == "__main__":
     plt.fill_between(conds,CcGAN_KDE-CcGAN_KDE_std,CcGAN_KDE+CcGAN_KDE_std,facecolor='#FFA600',edgecolor="#FFA600",alpha=0.3)
     plt.legend(['PcDGAN','CcGAN'],loc='upper center', bbox_to_anchor=(0.5, -0.15),fancybox=False, shadow=False, framealpha=0.0, ncol=2)
 
-    plt.title('KDE vs Condition')
+    plt.title('Likelihood Score')
     plt.xlabel('Condition')
-    plt.ylabel('KDE of Condition Label in Output Distribution')
+    
     plt.savefig('./'+folder+'/Evaluation/Probability Comparison.png',dpi=300, bbox_inches='tight')
 
     plt.figure(figsize=(18,12))
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     plt.fill_between(conds,CcGAN_MAE-CcGAN_MAE_std,CcGAN_MAE+CcGAN_MAE_std,facecolor='#FFA600',edgecolor="#FFA600",alpha=0.3)
     plt.legend(['PcDGAN','CcGAN'],loc='upper center', bbox_to_anchor=(0.5, -0.15),fancybox=False, shadow=False, framealpha=0.0, ncol=2)
 
-    plt.title('Label Score vs Condition')
+    plt.title('Lable Error')
     plt.xlabel('Condition')
     plt.ylabel('Label Score')
     plt.savefig('./'+folder+'/Evaluation/MAE Comparison.png',dpi=300, bbox_inches='tight')
