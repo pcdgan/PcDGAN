@@ -1,5 +1,5 @@
 # PcDGAN: A Continuous Conditional Diverse Generative Adversarial Network For Inverse Design
-
+![PcDGAN Architecture](https://pasteboard.co/JNTbzZj.png)
 This code can be used to reproduce the results presented in the paper. Citation information and paper information will be made available here once the paper is approved.
 
 ## Required packages
