@@ -150,7 +150,7 @@ This code can be used to reproduce the results presented in the paper. Citation 
    --size   Number of samples to generate at each step. Default: 1000
    --id     experiment ID or name. Default:
    ```
-  Change the id argument everytime to prevent over-writing previous weights. Train each model atleast 3 times to reproduce paper results (for the paper 10 models were trained). The results of each model will be saved under the Evaluation Directory.
+   Change the id argument everytime to prevent over-writing previous weights. Train each model atleast 3 times to reproduce paper results (for the paper 10 models were trained). The results of each model will be saved under the Evaluation Directory.
 
 
 6. To reproduce the results of the paper train atleast 3 versions of each model(although for the paper 10 were trained for each model) by changing the id argument during training and run the following:
