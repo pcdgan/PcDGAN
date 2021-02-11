@@ -16,8 +16,6 @@ from data import Donut2D, ThinDonut2D, Uniform2D, MixRing6
 
 parser = argparse.ArgumentParser(description='Eval Parameters')
 parser.add_argument('dataset', type=str, default='Uneven', help='Set which dataset to use. Default: Uneven, Options: Uneven, Donut, Uniform')
-parser.add_argument('--estimator', type=str, help='Name of the estimator checkpoint saved in the weights folder. Default: best_checkpoint', default='best_checkpoint')
-parser.add_argument('--embedder', type=str, help='Name of the embedder checkpoint saved in the weights folder. Default: best_checkpoint', default='best_checkpoint')
 parser.add_argument('--size', type=int, help='Number of samples to generate at each step. Default: 1000', default=1000)
 
 args = parser.parse_args()
