@@ -133,28 +133,22 @@ This code can be used to reproduce the results presented in the paper. Citation 
    optional arguments:
 
    ```
-   -h, --help            show this help message and exit
-  --mode MODE           Mode of operation, either train or evaluate. Default: Train
-  --vicinal_type VICINAL_TYPE
-                        The type of vicinal approach. Default: soft, Options: soft, hard
-  --kappa KAPPA         Vicinal loss kappa. If negative automatically calculated and scaled by the absolute value of
-                        the number. Default: -1.0 for PcDGAN -2.0 for CcGAN
-  --sigma SIGMA         Vicinal loss sigma. If negative automatically calculated. Default: -1.0
-  --estimator ESTIMATOR
-                        Name of the estimator checkpoint saved in the weights folder. Default: best_checkpoint
-  --embedder EMBEDDER   Name of the embedder checkpoint saved in the weights folder. Default: best_checkpoint
-  --lambda0 LAMBDA0     PcDGAN lambda0. Default: 3.0
-  --lambda1 LAMBDA1     PcDGAN lambda1. Default: 0.4
-  --lambert_cutoff LAMBERT_CUTOFF
-                        PcDGAN parameter "a". Default: 4.7
-  --gen_lr GEN_LR       Generator learning rate. Default: 1e-4
-  --disc_lr DISC_LR     Discriminator learning rate. Default: 1e-4
-  --train_steps TRAIN_STEPS
-                        Number of training steps. Default: 20000
-  --batch_size BATCH_SIZE
-                        GAN training Batch size. Default: 32
-  --size SIZE           Number of samples to generate at each step. Default: 1000
-  --id ID               experiment ID or name. Default:
+   -h, --help   show this help message and exit
+   --mode MODE  Mode of operation, either train or evaluate. Default: Train
+   --vicinal_type   The type of vicinal approach. Default: soft, Options: soft, hard
+   --kappa  Vicinal loss kappa. If negative automatically calculated and scaled by the absolute value of the number. Default: -1.0 for PcDGAN -2.0 for CcGAN
+   --sigma  Vicinal loss sigma. If negative automatically calculated. Default: -1.0
+   --estimator  Name of the estimator checkpoint saved in the weights folder. Default: best_checkpoint
+   --embedder   Name of the embedder checkpoint saved in the weights folder. Default: best_checkpoint
+   --lambda0    PcDGAN lambda0. Default: 3.0
+   --lambda1    PcDGAN lambda1. Default: 0.4
+   --lambert_cutoff PcDGAN parameter "a". Default: 4.7
+   --gen_lr GEN_LR  Generator learning rate. Default: 1e-4
+   --disc_lr DISC_LR    Discriminator learning rate. Default: 1e-4
+   --train_steps    Number of training steps. Default: 20000
+   --batch_size     GAN training Batch size. Default: 32
+   --size   Number of samples to generate at each step. Default: 1000
+   --id     experiment ID or name. Default:
    ```
   Change the id argument everytime to prevent over-writing previous weights. Train each model atleast 3 times to reproduce paper results (for the paper 10 models were trained). The results of each model will be saved under the Evaluation Directory.
 
